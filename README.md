@@ -111,6 +111,6 @@ The dynamic NLP is already, in structure, a model predictive control problem. Ne
 
 ---
 
-**Juan Laigle**: process modeling and optimization. Contact via [GitHub](https://github.com/juanlaigle-hub).
+**Juan Laiglecia**: process modeling and optimization · [LinkedIn](https://www.linkedin.com/in/juanlaiglecia) · [GitHub](https://github.com/juanlaigle-hub) · [Ingeniería VR](https://www.ingenieriavr.com)
 
 © All rights reserved. Images and content may not be reused without permission.
