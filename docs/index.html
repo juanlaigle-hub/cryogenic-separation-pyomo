@@ -104,7 +104,7 @@ applyBg();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyBg);
 
 const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 500);
-const HOME = { pos: new THREE.Vector3(-38, 34, 52), target: new THREE.Vector3(0, 9, -1) };
+const HOME = { pos: new THREE.Vector3(-42, 40, 62), target: new THREE.Vector3(-6, 8, -12) };
 const homePos = () => { const a = innerWidth / innerHeight, k = a < 1 ? 0.95 / a : a < 1.4 ? 1.25 : 1; return HOME.target.clone().add(HOME.pos.clone().sub(HOME.target).multiplyScalar(k)); };
 camera.position.copy(homePos());
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -119,7 +119,7 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(-30, 60, 35);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60, near: 1, far: 160 });
+Object.assign(sun.shadow.camera, { left: -75, right: 75, top: 75, bottom: -75, near: 1, far: 200 });
 scene.add(sun);
 
 // ---------- materials ----------
@@ -256,6 +256,51 @@ reboiler('RB8', trayY(8), 'RB8 · bottom reboiler', 'External heat duty Qreb, a 
   const g = new THREE.Group();
   for (const dz of [-1.4, 1.4]) for (const dx of [-.9, .9]) { const c = cyl(.1, 20, M.dark, 8); c.position.set(24.5 + dx, 10, dz); g.add(c); }
   scene.add(g); g.traverse(o => o.isMesh && shade(o));
+}
+
+// ---------- product storage (background, not part of the model) ----------
+{
+  const white = new THREE.MeshStandardMaterial({ color: 0xf2f4f5, roughness: .4, metalness: .25 });
+  const leg = new THREE.MeshStandardMaterial({ color: 0x8a949c, roughness: .5, metalness: .6 });
+  const dike = new THREE.MeshStandardMaterial({ color: 0xa7abad, roughness: 1 });
+  const g = new THREE.Group();
+  function bund(x0, x1, z0, z1) {           // containment wall around a tank area
+    const h = .9, t = .4, w = x1 - x0, d = z1 - z0;
+    const floor = box(w, .08, d, M.pad); floor.position.set((x0 + x1) / 2, .04, (z0 + z1) / 2); g.add(floor);
+    for (const [bx, bz, bw, bd] of [[(x0 + x1) / 2, z0, w, t], [(x0 + x1) / 2, z1, w, t], [x0, (z0 + z1) / 2, t, d], [x1, (z0 + z1) / 2, t, d]]) {
+      const b = box(bw, h, bd, dike); b.position.set(bx, h / 2, bz); g.add(b);
+    }
+  }
+  function sphere(x, z, r) {                // pressurized sphere on legs (light products)
+    const y = r + 2.2;
+    const s = shade(new THREE.Mesh(new THREE.SphereGeometry(r, 40, 24), white)); s.position.set(x, y, z); g.add(s);
+    const belt = shade(new THREE.Mesh(new THREE.TorusGeometry(r * 1.005, .08, 6, 48), leg)); belt.rotation.x = Math.PI / 2; belt.position.set(x, y, z); g.add(belt);
+    const n = 8;
+    for (let i = 0; i < n; i++) {
+      const a = i * Math.PI * 2 / n, c = cyl(.22, y, leg, 10);
+      c.position.set(x + Math.cos(a) * r * .98, y / 2, z + Math.sin(a) * r * .98); g.add(c);
+    }
+    const stair = cyl(.08, y + r, M.rail, 6); stair.position.set(x + r + .6, (y + r) / 2, z); g.add(stair);
+    const top = shade(new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, .1, 20), M.rail)); top.position.set(x, y + r + .05, z); g.add(top);
+  }
+  function tank(x, z, r, h) {               // atmospheric cylindrical tank with cone roof and spiral stair
+    const c = cyl(r, h, white, 48); c.position.set(x, h / 2, z); g.add(c);
+    const roof = shade(new THREE.Mesh(new THREE.ConeGeometry(r * 1.02, r * .25, 48), white)); roof.position.set(x, h + r * .125, z); g.add(roof);
+    for (const y of [h * .33, h * .66]) { const band = shade(new THREE.Mesh(new THREE.TorusGeometry(r + .02, .06, 6, 48), leg)); band.rotation.x = Math.PI / 2; band.position.set(x, y, z); g.add(band); }
+    const steps = 28;
+    for (let i = 0; i < steps; i++) {
+      const a = Math.PI * .2 + i * (Math.PI * .9 / steps), y = (i + .5) * h / steps;
+      const st = box(.9, .08, .35, M.rail); st.position.set(x + Math.cos(a) * (r + .45), y, z + Math.sin(a) * (r + .45)); st.rotation.y = -a; g.add(st);
+    }
+    const rail = shade(new THREE.Mesh(new THREE.TorusGeometry(r * .98, .05, 6, 48), M.rail)); rail.rotation.x = Math.PI / 2; rail.position.set(x, h + .6, z); g.add(rail);
+  }
+  // spheres: ethane / propane / butane products
+  bund(-30, 2, -46, -30);
+  for (const [x, z, r] of [[-24, -38, 5], [-12, -38, 5.5], [-3, -38, 4.5]]) sphere(x, z, r);
+  // cylindrical tanks: gasoline / condensate
+  bund(8, 42, -50, -28);
+  for (const [x, z, r, h] of [[15, -35, 5, 10], [30, -35, 6, 12], [15, -45, 3.5, 8], [30, -45.5, 3.5, 8]]) tank(x, z, r, h);
+  addUnit('STO', g, { title: 'Product storage', body: 'Pressurized spheres and atmospheric tanks where the plant products are stored. Shown for context: storage is not part of the optimization model.' }, new THREE.Vector3(-12, 16.5, -38));
 }
 
 // ---------- streams ----------
