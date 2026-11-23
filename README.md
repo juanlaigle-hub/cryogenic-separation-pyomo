@@ -20,6 +20,12 @@
 
 ---
 
+## Interactive 3D view
+
+[![Interactive 3D view of the plant](assets/05-3d-plant.png)](https://juanlaigle-hub.github.io/cryogenic-separation-pyomo/)
+
+**[▶ Open the live 3D demo](https://juanlaigle-hub.github.io/cryogenic-separation-pyomo/)**: rotate the plant, follow each stream and click any unit to see what the Pyomo model represents. Built with three.js. The layout is representative, not the real plant geometry.
+
 ## The process
 
 ![The complete cryogenic sector](assets/01-plant.png)
