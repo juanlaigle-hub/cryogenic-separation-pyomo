@@ -2,7 +2,7 @@
 
 **A plant-wide, equation-oriented model of a natural-gas cryogenic separation sector (TGS), migrated from AMPL to Pyomo and solved as a large-scale dynamic NLP with an open-source stack.**
 
-> 🇪🇸 Modelo riguroso de todo el sector criogénico de una planta de separación de gas natural (TGS), migrado de AMPL a Pyomo y resuelto como un problema de optimización dinámica de gran escala con herramientas open-source.
+> Modelo riguroso de todo el sector criogénico de una planta de separación de gas natural (TGS), migrado de AMPL a Pyomo y resuelto como un problema de optimización dinámica de gran escala con herramientas open-source.
 
 ![Pyomo](https://img.shields.io/badge/Pyomo-6.8-1f6feb) ![IPOPT](https://img.shields.io/badge/IPOPT-3.14-2da44e) ![MUMPS](https://img.shields.io/badge/MUMPS-5.8-8250df) ![Python](https://img.shields.io/badge/Python-3.11-3776ab)
 
@@ -22,9 +22,9 @@
 
 ## Interactive 3D view
 
-[![Interactive 3D view of the plant](assets/05-3d-plant.png)](https://juanlaigle-hub.github.io/cryogenic-separation-pyomo/)
+[![Interactive 3D view of the plant](assets/05-3d-plant.png)](https://juanlaigle-hub.github.io/cryogenic-separation-pyomo/docs/)
 
-**[▶ Open the live 3D demo](https://juanlaigle-hub.github.io/cryogenic-separation-pyomo/)**: rotate the plant, follow each stream and click any unit to see what the Pyomo model represents. Built with three.js. The layout is representative, not the real plant geometry.
+**[▶ Open the live 3D demo](https://juanlaigle-hub.github.io/cryogenic-separation-pyomo/docs/)**: rotate the plant, follow each stream and click any unit to see what the Pyomo model represents. Built with three.js. The layout is representative, not the real plant geometry.
 
 ## The process
 
@@ -61,44 +61,44 @@ Converging a plant-wide, highly coupled NLP from scratch is hard. The model is i
 
 **Homotopy.** A family of problems that blends a decoupled model $F_0$ into the full plant model $F_1$:
 
-$$
+```math
 F(x,\lambda) = (1-\lambda)\,F_0(x) + \lambda\,F_1(x) = 0, \qquad \lambda \in [0,1]
-$$
+```
 
 with an adaptive step that grows on success and is halved on failure:
 
-$$
+```math
 \lambda_{j+1} = \min(1,\ \lambda_j + \Delta_j), \qquad
 \Delta_{j+1} =
 \begin{cases}
 \min(1.5\,\Delta_j,\ \Delta_{\max}) & \text{converged} \\
 \Delta_j / 2 \ \text{(from the last converged } \lambda) & \text{failed}
 \end{cases}
-$$
+```
 
 **Dynamic model.** A semi-explicit index-1 DAE
 
-$$
+```math
 \dot{x} = f(x, z, u), \qquad 0 = g(x, z, u), \qquad x(0) = x_{ss}
-$$
+```
 
 discretized by Radau collocation on finite elements.
 
 **Optimal control problem.** Tracking of a product-recovery setpoint, with a soft (exact $\ell_1$) product specification and move suppression on the manipulated heat duties:
 
-$$
+```math
 \min_{u}\; \sum_{e,c} \big(r(e,c) - r_{sp}\big)^2 \;+\; \rho \sum_{e,c} s(e,c) \;+\; \sum_{u} w_u \sum_e \big(u_e - u_{e-1}\big)^2
-$$
+```
 
-$$
+```math
 \text{s.t.}\quad x_{C_1,\text{bot}} \le x_{C_1}^{\max} + s, \qquad s \ge 0
-$$
+```
 
 **Thermodynamics.** SRK cubic in the compressibility factor, with the physically correct root selected:
 
-$$
+```math
 Z^3 - Z^2 + Z\,(A - B - B^2) - AB = 0
-$$
+```
 
 ---
 
