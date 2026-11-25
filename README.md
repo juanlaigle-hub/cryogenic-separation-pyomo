@@ -13,9 +13,9 @@
 ## Highlights
 
 - **Complete plant, not just the column.** Heat-exchanger trains, high-pressure separator, turboexpander/compressor, demethanizer with side reboilers and side streams, all coupled in a single model.
-- **Faithful AMPL → Pyomo migration.** Every AMPL variable has a Pyomo counterpart; the migrated model reproduces the reference solution and closes the mass and energy balances to machine precision.
+- **Faithful AMPL → Pyomo migration.** Every AMPL variable has a Pyomo counterpart; the migrated model reproduces the reference solution and closes the mass and energy balances to a relative error of about 1e-14, with equation residuals below 1e-6.
 - **Dynamic optimization at scale.** DAE model discretized with Radau collocation: **~55,000 variables** solved with IPOPT + MUMPS.
-- **Homotopy-based initialization.** A continuation strategy takes the model from a decoupled problem to the fully coupled plant and provides the warm start for the dynamic problems. The same idea carries over to MPC.
+- **Continuation-based initialization.** A natural-parameter continuation on the side-stream coupling takes the model from a decoupled problem to the fully coupled plant and provides the warm start for the dynamic problems. Shifted warm starts are the same idea used in MPC.
 - **Fully open-source and reproducible.** Python, Pyomo, IPOPT and MUMPS in a conda-forge environment, with automated tests.
 
 ---
@@ -41,7 +41,7 @@ The original formulation, a DAE in AMPL with Radau collocation, was migrated equ
 - Radau collocation written explicitly in Pyomo
 - SRK thermodynamics with explicit selection of the cubic root
 - Consistent units and explicit parameters
-- Verification against the AMPL solution: same degrees of freedom, same objective, residuals and balance errors at machine precision
+- Verification against the AMPL solution: same degrees of freedom, same objective at the stored solution, equation residuals below 1e-6 and mass and energy balances closing to about 1e-14
 
 ## The optimization problem and its homotopy
 
@@ -59,13 +59,14 @@ Converging a plant-wide, highly coupled NLP from scratch is hard. The model is i
 
 ## Some of the math
 
-**Homotopy.** A family of problems that blends a decoupled model $F_0$ into the full plant model $F_1$:
+**Homotopy (natural-parameter continuation).** The coupling between the side stream and the side reboilers is introduced gradually. For the side reboilers $k \in \{3, 5\}$, the heat duty and the enthalpy of the returning side stream are blended between a decoupled value (marked with a hat or "mix") and the physical one:
 
 ```math
-F(x,\lambda) = (1-\lambda)\,F_0(x) + \lambda\,F_1(x) = 0, \qquad \lambda \in [0,1]
+Q_k(\lambda) = \lambda\,Q_k + (1-\lambda)\,\hat{Q}_k, \qquad
+h_{\text{side}}(\lambda) = \lambda\,h_{\text{phys}} + (1-\lambda)\,h_{\text{mix}}, \qquad \lambda \in [0,1]
 ```
 
-with an adaptive step that grows on success and is halved on failure:
+The plant model $F(x;\lambda) = 0$ is solved for a sequence $0 = \lambda_0 < \lambda_1 < \dots < \lambda_N = 1$, each solve warm-started from the previous one. Only $\lambda = 1$ is the physical plant; intermediate points are numerical stepping stones. The step is adaptive: it grows on success and is halved on failure:
 
 ```math
 \lambda_{j+1} = \min(1,\ \lambda_j + \Delta_j), \qquad

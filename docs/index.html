@@ -132,6 +132,7 @@ const M = {
   yellow: new THREE.MeshStandardMaterial({ color: 0xe0b43a, roughness: .6, metalness: .2 }),
   machine: new THREE.MeshStandardMaterial({ color: 0x3f7cac, roughness: .4, metalness: .5 }),
   rail: new THREE.MeshStandardMaterial({ color: 0xd9a62e, roughness: .6, metalness: .3 }),
+  coldbox: new THREE.MeshStandardMaterial({ color: 0x7f95a8, roughness: .6, metalness: .3 }),
 };
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), M.ground);
@@ -174,27 +175,34 @@ function hShell(r, len, mat, axis = 'x') { // horizontal shell with heads
 function pad(w, d, x, z) { const p = box(w, .3, d, M.pad); p.position.set(x, .15, z); scene.add(p); }
 
 // ---------- equipment ----------
-// HE2 x4 (2 x 2 rack)
-{
+// Cold boxes: brazed aluminium plate-fin exchangers enclosed in an insulated, purged steel box
+function coldBox(x0, x1, h, cores) {
   const g = new THREE.Group();
-  for (const y of [1.6, 3.2]) for (const z of [-1, 1]) {
-    const s = hShell(.6, 7, M.insul); s.position.set(-22, y, z); g.add(s);
-    for (const x of [-24.5, -19.5]) { const n = box(.25, 1, .25, M.steel); n.position.set(x, y - .9, z); g.add(n); }
+  const w = x1 - x0, xc = (x0 + x1) / 2, d = 3.2;
+  const shell = box(w, h, d, M.coldbox); shell.position.set(xc, .3 + h / 2, 0); g.add(shell);
+  const n = Math.round(w / 1.2);
+  for (let i = 0; i <= n; i++) {                 // vertical stiffeners on both long faces
+    const x = x0 + i * w / n;
+    for (const z of [-d / 2 - .03, d / 2 + .03]) { const r = box(.1, h, .06, M.steel); r.position.set(x, .3 + h / 2, z); g.add(r); }
   }
-  for (const x of [-25.6, -18.4]) { const h = box(.5, 3.4, 3, M.steel); h.position.set(x, 2.4, 0); g.add(h); }
-  pad(9, 5, -22, 0);
-  addUnit('HE2', g, { title: 'HE2 ×4', body: 'Feed / residue-gas exchangers, four in parallel. One heat duty per cell with SRK enthalpies on both sides.' }, new THREE.Vector3(-22, 5.4, 0));
+  const cap = box(w + .2, .15, d + .2, M.steel); cap.position.set(xc, .3 + h + .07, 0); g.add(cap);
+  for (let k = 0; k < cores; k++) {               // one nozzle pair per plate-fin core on the roof
+    const x = x0 + (k + .5) * w / cores;
+    for (const z of [-.6, .6]) { const nz = cyl(.18, .6, M.steel, 12); nz.position.set(x, .3 + h + .4, z); g.add(nz); }
+  }
+  return g;
 }
-// HE1 x2
+// HE2 x4 (cold box with four plate-fin cores)
 {
-  const g = new THREE.Group();
-  for (const z of [-1, 1]) {
-    const s = hShell(.6, 6, M.insul); s.position.set(-11.5, 2.4, z); g.add(s);
-    for (const x of [-13.5, -9.5]) { const n = box(.25, 1.8, .25, M.steel); n.position.set(x, 1.1, z); g.add(n); }
-  }
-  for (const x of [-14.6, -8.4]) { const h = box(.5, 1.8, 3, M.steel); h.position.set(x, 2.4, 0); g.add(h); }
+  const g = coldBox(-25.6, -18.4, 4.2, 4);
+  pad(9, 5, -22, 0);
+  addUnit('HE2', g, { title: 'HE2 ×4 · cold box', body: 'Four plate-fin feed / residue-gas exchangers in parallel inside a cold box. One heat duty per cell with SRK enthalpies on both sides.' }, new THREE.Vector3(-22, 5.6, 0));
+}
+// HE1 x2 (cold box with two plate-fin cores)
+{
+  const g = coldBox(-14.6, -8.4, 3.6, 2);
   pad(8, 5, -11.5, 0);
-  addUnit('HE1', g, { title: 'HE1 ×2', body: 'Second cooling stage against the cold residue gas from the column top. Liquid/vapor split computed at the outlet.' }, new THREE.Vector3(-11.5, 4.4, 0));
+  addUnit('HE1', g, { title: 'HE1 ×2 · cold box', body: 'Second cooling stage: two plate-fin exchangers against the cold residue gas from the column top. Liquid/vapor split computed at the outlet.' }, new THREE.Vector3(-11.5, 5, 0));
 }
 // HP separator
 {
@@ -294,13 +302,13 @@ reboiler('RB8', trayY(8), 'RB8 · bottom reboiler', 'External heat duty Qreb, a 
     }
     const rail = shade(new THREE.Mesh(new THREE.TorusGeometry(r * .98, .05, 6, 48), M.rail)); rail.rotation.x = Math.PI / 2; rail.position.set(x, h + .6, z); g.add(rail);
   }
-  // spheres: ethane / propane / butane products
+  // pressurized spheres: propane / butane / LPG (ethane usually leaves by pipeline)
   bund(-30, 2, -46, -30);
   for (const [x, z, r] of [[-24, -38, 5], [-12, -38, 5.5], [-3, -38, 4.5]]) sphere(x, z, r);
   // cylindrical tanks: gasoline / condensate
   bund(8, 42, -50, -28);
   for (const [x, z, r, h] of [[15, -35, 5, 10], [30, -35, 6, 12], [15, -45, 3.5, 8], [30, -45.5, 3.5, 8]]) tank(x, z, r, h);
-  addUnit('STO', g, { title: 'Product storage', body: 'Pressurized spheres and atmospheric tanks where the plant products are stored. Shown for context: storage is not part of the optimization model.' }, new THREE.Vector3(-12, 16.5, -38));
+  addUnit('STO', g, { title: 'Product storage', body: 'Pressurized spheres for LPG products and atmospheric tanks for natural gasoline. Ethane usually leaves by pipeline. Shown for context: storage is not part of the optimization model.' }, new THREE.Vector3(-12, 16.5, -38));
 }
 
 // ---------- streams ----------
